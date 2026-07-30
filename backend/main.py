@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from app.api.router import router
+
 app = FastAPI(
     title="Argus API",
     version="0.1.0",
@@ -7,8 +9,4 @@ app = FastAPI(
 )
 
 
-@app.get("/")
-def root():
-    return {
-        "message": "Argus API is running"
-    }
+app.include_router(router) 

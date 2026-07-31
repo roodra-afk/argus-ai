@@ -7,6 +7,7 @@ class SecurityEvent:
         file_size: int,
     ):
         self.filename = filename
+        self.extension = None
         self.sha256 = sha256
         self.source = source
         self.file_size = file_size

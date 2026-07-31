@@ -1,5 +1,6 @@
 from app.models.security_event import SecurityEvent
-
+import mimetypes
+import os
 import hashlib
 
 class AnalysisService:
@@ -19,6 +20,12 @@ class AnalysisService:
 
         return sha256.hexdigest()
 
+    def extract_metadata(self, event):
+        event.extension = os.path.splitext(event.filename)[1].lower()
+
+        mime_type, _ = mimetypes.guess_type(event.filename)
+        event.mime_type = mime_type
+
     def analyze_file(self,file):
         sha256 = self.calc_sha256(file)
         print(file.size)
@@ -30,7 +37,10 @@ class AnalysisService:
             file_size=file.size
         )
 
-        return event
+        self.extract_metadata(event)
 
+        print(vars(event))
+        
+        return event
     
 analysis_service = AnalysisService()

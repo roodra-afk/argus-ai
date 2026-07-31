@@ -14,3 +14,5 @@ class SecurityEvent:
         self.mime_type = None
         self.risk_score = None
         self.verdict = None
+        self.detected_type = None
+        self.validation_warnings = []

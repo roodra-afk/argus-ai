@@ -16,3 +16,4 @@ class SecurityEvent:
         self.verdict = None
         self.detected_type = None
         self.validation_warnings = []
+        self.pe_info = None

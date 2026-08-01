@@ -1,3 +1,4 @@
+from app.services.pe_service import pe_service
 from app.core.executable_extensions import EXECUTABLE_EXTENSIONS
 from app.core.mime_types import EXPECTED_MIME_TYPES
 from app.core.file_types import EXPECTED_EXTENSIONS
@@ -108,6 +109,10 @@ class AnalysisService:
         self.extract_metadata(event)
         self.detect_file_type(file, event)
         self.validate_file(event)
+
+        if event.detected_type == "Windows Executable":
+            pe = pe_service.load_pe(file)
+            event.pe_info = pe_service.get_summary(pe)
 
         print(vars(event))
         

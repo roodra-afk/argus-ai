@@ -1,3 +1,4 @@
+from app.core.mime_types import EXPECTED_MIME_TYPES
 from app.core.file_types import EXPECTED_EXTENSIONS
 from app.core.signatures import FILE_SIGNATURES
 from app.models.security_event import SecurityEvent
@@ -43,17 +44,34 @@ class AnalysisService:
 
     def validate_file(self, event):
         self.validate_extension(event)
+        self.validate_mime(event)
+
+    def validate_mapping(self, event, mapping, actual_value, field_name):
+        expected_value = mapping.get(event.detected_type)
+
+        if expected_value is None:
+            return
+
+        if actual_value != expected_value:
+            event.validation_warnings.append(
+                f"{field_name} mismatch: expected {expected_value}, found {actual_value}"
+            )
 
     def validate_extension(self, event):
-        expected_extension = EXPECTED_EXTENSIONS.get(event.detected_type)
-        
-        if expected_extension is None:
-            return
-        
-        if event.extension != expected_extension:
-            event.validation_warnings.append(
-                f"Extension mismatch: expected {expected_extension}, found {event.extension}"
-            )
+        self.validate_mapping(
+            event,
+            EXPECTED_EXTENSIONS,
+            event.extension,
+            "Extension"
+        )
+
+    def validate_mime(self, event):
+        self.validate_mapping(
+            event,
+            EXPECTED_MIME_TYPES,
+            event.mime_type,
+            "MIME"
+        )
         
     def analyze_file(self, file):
         sha256 = self.calc_sha256(file)

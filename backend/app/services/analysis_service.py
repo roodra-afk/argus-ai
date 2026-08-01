@@ -1,3 +1,4 @@
+from app.core.executable_extensions import EXECUTABLE_EXTENSIONS
 from app.core.mime_types import EXPECTED_MIME_TYPES
 from app.core.file_types import EXPECTED_EXTENSIONS
 from app.core.signatures import FILE_SIGNATURES
@@ -45,6 +46,10 @@ class AnalysisService:
     def validate_file(self, event):
         self.validate_extension(event)
         self.validate_mime(event)
+        self.validate_double_extension(event)
+
+    def add_warning(self, event, message):
+        event.validation_warnings.append(message)
 
     def validate_mapping(self, event, mapping, actual_value, field_name):
         expected_value = mapping.get(event.detected_type)
@@ -53,7 +58,8 @@ class AnalysisService:
             return
 
         if actual_value != expected_value:
-            event.validation_warnings.append(
+            self.add_warning(
+                event,
                 f"{field_name} mismatch: expected {expected_value}, found {actual_value}"
             )
 
@@ -71,6 +77,22 @@ class AnalysisService:
             EXPECTED_MIME_TYPES,
             event.mime_type,
             "MIME"
+        )
+
+    def validate_double_extension(self, event):
+        parts = event.filename.split(".")
+
+        if len(parts) < 3:
+            return
+
+        last_extension = "." + parts[-1]
+
+        if last_extension not in EXECUTABLE_EXTENSIONS:
+            return
+
+        self.add_warning(
+            event,
+            f"Suspicious double extension detected: {event.filename}"
         )
         
     def analyze_file(self, file):

@@ -1,3 +1,5 @@
+from app.core.suspicious_apis import SUSPICIOUS_APIS
+
 import pefile
 
 MACHINE_TYPES = {
@@ -32,9 +34,44 @@ class PEService:
             "architecture": self.get_machine_type(pe),
             "sections": self.get_section_count(pe),
             "entry_point": self.get_entry_point(pe),
+            "dlls": self.get_imported_dlls(pe),
+            "suspicious_apis": self.get_suspicious_apis(pe),
         }
 
     def get_entry_point(self, pe):
         return hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 
+    def get_imported_dlls(self, pe):
+        dlls = []
+
+        if not hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
+            return dlls
+
+        for entry in pe.DIRECTORY_ENTRY_IMPORT:
+            dlls.append(entry.dll.decode())
+
+        return dlls
+
+    def get_imported_apis(self, pe):
+        apis = []
+
+        if not hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
+            return apis
+
+        for entry in pe.DIRECTORY_ENTRY_IMPORT:
+            for imp in entry.imports:
+                if imp.name:
+                    apis.append(imp.name.decode())
+
+        return apis
+
+    def get_suspicious_apis(self, pe):
+        suspicious = set()
+
+        for api in self.get_imported_apis(pe):
+            if api in SUSPICIOUS_APIS:
+                suspicious.add(api)
+
+        return sorted(suspicious)
+        
 pe_service = PEService()

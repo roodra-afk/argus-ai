@@ -1,3 +1,4 @@
+from app.services.risk_service import risk_service
 from app.services.entropy_service import entropy_service
 from app.services.string_service import string_service
 from app.services.pe_service import pe_service
@@ -118,6 +119,11 @@ class AnalysisService:
         if event.detected_type == "Windows Executable":
             pe = pe_service.load_pe(file)
             event.pe_info = pe_service.get_summary(pe)
+
+        risk = risk_service.get_summary(event)
+
+        event.risk_score = risk["score"]
+        event.verdict = risk["verdict"]
 
         print(vars(event))
         

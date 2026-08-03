@@ -18,3 +18,4 @@ class SecurityEvent:
         self.validation_warnings = []
         self.pe_info = None
         self.string_info = None
+        self.entropy_info = None

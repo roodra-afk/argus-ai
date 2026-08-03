@@ -1,3 +1,4 @@
+from app.services.entropy_service import entropy_service
 from app.services.string_service import string_service
 from app.services.pe_service import pe_service
 from app.core.executable_extensions import EXECUTABLE_EXTENSIONS
@@ -112,6 +113,7 @@ class AnalysisService:
         self.validate_file(event)
 
         event.string_info = string_service.get_summary(file)
+        event.entropy_info = entropy_service.get_summary(file)
 
         if event.detected_type == "Windows Executable":
             pe = pe_service.load_pe(file)

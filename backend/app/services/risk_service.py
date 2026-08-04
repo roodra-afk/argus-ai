@@ -28,6 +28,11 @@ class RiskService:
             event.string_info["urls"]
         ):
             score += 5
+
+        if event.pe_info:
+            reason_count = event.pe_info["packer"]["reason_count"]
+
+            score += reason_count * 10
             
         return score
 

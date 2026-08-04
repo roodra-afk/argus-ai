@@ -19,3 +19,4 @@ class SecurityEvent:
         self.pe_info = None
         self.string_info = None
         self.entropy_info = None
+        self.signature_info = None

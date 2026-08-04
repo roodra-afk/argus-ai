@@ -1,3 +1,4 @@
+from app.services.signature_service import signature_service
 from app.services.risk_service import risk_service
 from app.services.entropy_service import entropy_service
 from app.services.string_service import string_service
@@ -115,10 +116,11 @@ class AnalysisService:
 
         event.string_info = string_service.get_summary(file)
         event.entropy_info = entropy_service.get_summary(file)
-
+        
         if event.detected_type == "Windows Executable":
             pe = pe_service.load_pe(file)
             event.pe_info = pe_service.get_summary(pe)
+            event.signature_info = signature_service.get_summary(pe)
 
         risk = risk_service.get_summary(event)
 

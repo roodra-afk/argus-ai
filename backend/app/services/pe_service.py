@@ -1,5 +1,6 @@
 from app.core.suspicious_sections import SUSPICIOUS_SECTIONS
 from app.core.suspicious_apis import SUSPICIOUS_APIS
+from app.core.packer_signatures import PACKER_SIGNATURES
 
 import pefile
 
@@ -38,7 +39,7 @@ class PEService:
             "entry_point": self.get_entry_point(pe),
             "dlls": self.get_imported_dlls(pe),
             "suspicious_apis": self.get_suspicious_apis(pe),
-            
+            "packer": self.detect_packer(pe)
         }
 
     def get_entry_point(self, pe):
@@ -76,6 +77,43 @@ class PEService:
                 suspicious.add(api)
 
         return sorted(suspicious)
+
+    def detect_packer(self, pe):
+        reasons = []
+        
+        for section in pe.sections:
+            entropy = self.calculate_entropy(section)
+            permissions = self.get_permissions(section)
+            
+            name = self.get_section_name(section).lower()
+
+            if name in PACKER_SIGNATURES:
+                reasons.append(
+                    f"Known packer section: {PACKER_SIGNATURES[name]}"
+                )
+
+            if (
+                entropy >= 7.3 and
+                permissions["execute"]
+            ):
+                reasons.append(
+                    f"High entropy exectuable section: {self.get_section_name(section)}"
+                )
+
+        imports = self.get_imported_apis(pe)
+        import_count = len(imports)
+
+        if import_count <= 15:
+            reasons.append(
+                f"Very small import table ({len(imports)} imports)"
+            )
+
+        return {
+            "detected": len(reasons) > 0,
+            "reason_count": len(reasons),
+            "import_count": import_count
+            "reasons": reasons
+        }
 
     def get_sections(self, pe):
         sections = []

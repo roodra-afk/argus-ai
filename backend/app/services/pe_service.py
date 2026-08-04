@@ -1,3 +1,4 @@
+from app.core.suspicious_sections import SUSPICIOUS_SECTIONS
 from app.core.suspicious_apis import SUSPICIOUS_APIS
 
 import pefile
@@ -32,10 +33,12 @@ class PEService:
     def get_summary(self, pe):
         return {
             "architecture": self.get_machine_type(pe),
-            "sections": self.get_section_count(pe),
+            "section_count": self.get_section_count(pe),
+            "sections": self.get_sections(pe),
             "entry_point": self.get_entry_point(pe),
             "dlls": self.get_imported_dlls(pe),
             "suspicious_apis": self.get_suspicious_apis(pe),
+            
         }
 
     def get_entry_point(self, pe):
@@ -73,5 +76,66 @@ class PEService:
                 suspicious.add(api)
 
         return sorted(suspicious)
+
+    def get_sections(self, pe):
+        sections = []
+
+        for section in pe.sections:
+            section_info = {
+                "name": self.get_section_name(section),
+                "virtual_size": section.Misc_VirtualSize,
+                "raw_size": section.SizeOfRawData,
+                "entropy": self.calculate_entropy(section),
+                "permissions": self.get_permissions(section),
+                "findings": self.analyze_section(section)
+            }
+
+            sections.append(section_info)
+
+        return sections
+
+    def calculate_entropy(self, section):
+        return round(section.get_entropy(), 2)
+
+    def get_section_name(self, section):
+        return section.Name.decode().rstrip("\x00")
+
+    def get_permissions(self, section):
+        characteristics = section.Characteristics
+        
+        return {
+            "read": bool(characteristics & 0x40000000),
+            "write": bool(characteristics & 0x80000000),
+            "execute": bool(characteristics & 0x20000000),
+        }
+
+    def analyze_section(self, section):
+        findings = []
+
+        entropy = self.calculate_entropy(section)
+        permissions = self.get_permissions(section)
+
+        name = self.get_section_name(section).lower()
+
+        if name in SUSPICIOUS_SECTIONS:
+            findings.append("Suspicious section name")
+
+        if entropy >= 7.5:
+            findings.append("High entropy section")
+
+        if (
+            permissions["read"] and
+            permissions["write"] and
+            permissions["execute"]
+        ):
+            findings.append("RWX section")
+
+        if (
+            permissions["write"] and
+            permissions["execute"]
+        ):
+            findings.append("Writable executable section")
+
+        return findings
         
 pe_service = PEService()

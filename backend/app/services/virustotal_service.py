@@ -50,11 +50,13 @@ class VirusTotalService:
         data = response.json()["data"]["attributes"]
 
         stats = data["last_analysis_stats"]
+        total_engines = sum(stats.values())
 
         return {
             "detections": stats["malicious"],
             "suspicious": stats["suspicious"],
             "undetected": stats["undetected"],
+            "total_engines": total_engines,
             "sha256": data["sha256"],
             "times_submitted": data["times_submitted"],
             "first_submission": data["first_submission_date"],

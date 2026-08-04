@@ -1,3 +1,4 @@
+from app.services.report_service import report_service
 from app.services.mitre_service import mitre_service
 from app.services.virustotal_service import virustotal_service
 from app.services.signature_service import signature_service
@@ -132,7 +133,7 @@ class AnalysisService:
         event.risk_score = risk["score"]
         event.verdict = risk["verdict"]
 
-        print(vars(event))
+        report_service.generate(event, "report.pdf")
         
         return event
     

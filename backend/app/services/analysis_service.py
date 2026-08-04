@@ -1,3 +1,4 @@
+from app.services.virustotal_service import virustotal_service
 from app.services.signature_service import signature_service
 from app.services.risk_service import risk_service
 from app.services.entropy_service import entropy_service
@@ -109,6 +110,8 @@ class AnalysisService:
             source="manual_upload",
             file_size=file.size
         )
+
+        event.virustotal_info = virustotal_service.lookup_file(event.sha256)
 
         self.extract_metadata(event)
         self.detect_file_type(file, event)

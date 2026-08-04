@@ -111,7 +111,7 @@ class PEService:
         return {
             "detected": len(reasons) > 0,
             "reason_count": len(reasons),
-            "import_count": import_count
+            "import_count": import_count,
             "reasons": reasons
         }
 

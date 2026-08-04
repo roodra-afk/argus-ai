@@ -7,34 +7,37 @@ class RiskService:
 
     def calculate_score(self, event):
         score = 0
-
+    
         if event.validation_warnings:
             score += 20
-
+    
         if (
             event.pe_info and
             event.pe_info["suspicious_apis"]
         ):
-            score += 10
-
+            score += 5
+    
         if (
             event.entropy_info and
             event.entropy_info["entropy"] >= 7.2
         ):
             score += 25
-
-        if (
-            event.string_info and
-            event.string_info["urls"]
-        ):
-            score += 5
-
+    
         if event.pe_info:
             reason_count = event.pe_info["packer"]["reason_count"]
-
             score += reason_count * 10
-            
-        return score
+    
+        if event.virustotal_info:
+            detections = event.virustotal_info["detections"]
+    
+            if detections >= 20:
+                score += 60
+            elif detections >= 10:
+                score += 40
+            elif detections >= 5:
+                score += 20
+    
+        return min(score, 100)
 
     def calculate_verdict(self, score):
         if score >= 50:

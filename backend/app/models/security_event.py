@@ -20,3 +20,4 @@ class SecurityEvent:
         self.string_info = None
         self.entropy_info = None
         self.signature_info = None
+        self.virustotal_info = None

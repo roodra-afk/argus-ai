@@ -29,13 +29,21 @@ class RiskService:
     
         if event.virustotal_info:
             detections = event.virustotal_info["detections"]
-    
+        
+            print("VT detections:", detections)
+        
             if detections >= 20:
                 score += 60
             elif detections >= 10:
                 score += 40
             elif detections >= 5:
                 score += 20
+            elif detections >= 2:
+                score += 10
+            elif detections == 1:
+                score += 5
+
+        print("Final Risk Score:", score)
     
         return min(score, 100)
 

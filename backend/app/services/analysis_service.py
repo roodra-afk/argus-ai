@@ -1,3 +1,4 @@
+from app.services.mitre_service import mitre_service
 from app.services.virustotal_service import virustotal_service
 from app.services.signature_service import signature_service
 from app.services.risk_service import risk_service
@@ -124,7 +125,8 @@ class AnalysisService:
             pe = pe_service.load_pe(file)
             event.pe_info = pe_service.get_summary(pe)
             event.signature_info = signature_service.get_summary(pe)
-
+            event.mitre_info = mitre_service.get_summary(pe)
+                
         risk = risk_service.get_summary(event)
 
         event.risk_score = risk["score"]

@@ -33,8 +33,19 @@ def analysis_status():
 def upload_file(file: UploadFile = File(...)):
     event = analysis_service.analyze_file(file)
     
-    return UploadResponse (
-        filename  = file.filename,
-        sha256 = event.sha256,
+    return UploadResponse(
+        filename=file.filename,
+        sha256=event.sha256,
+    
+        detected_type=event.detected_type,
+    
+        risk_score=event.risk_score,
+        verdict=event.verdict,
+    
+        vt_detections=event.virustotal_info["detections"],
+        vt_total_engines=event.virustotal_info["total_engines"],
+    
+        signed=event.signature_info["signed"],
+    
         ai_explanation=event.ai_explanation
     )

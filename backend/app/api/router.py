@@ -1,8 +1,12 @@
+from fastapi import HTTPException
 from fastapi import APIRouter, UploadFile, File
 
 from app.core.config import settings
 from app.schemas.upload_response import UploadResponse
 from app.services.analysis_service import analysis_service
+from app.schemas.chat_request import ChatRequest
+from app.schemas.chat_response import ChatResponse
+from app.services.ai_service import ai_service
 
 router = APIRouter(
     prefix="/api/v1"
@@ -48,4 +52,26 @@ def upload_file(file: UploadFile = File(...)):
         signed=event.signature_info["signed"],
     
         ai_explanation=event.ai_explanation
+    )
+
+@router.post(
+    "/analysis/chat",
+    response_model=ChatResponse
+)
+def chat(request: ChatRequest):
+    event = analysis_service.get_analysis(request.filename)
+
+    if event is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found. Upload the file first."
+        )
+
+    answer = ai_service.chat(
+        event,
+        request.question
+    )
+
+    return ChatResponse(
+        answer=answer
     )

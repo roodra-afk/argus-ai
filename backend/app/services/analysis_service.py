@@ -18,6 +18,9 @@ import os
 import hashlib
 
 class AnalysisService:
+    def __init__(self):
+            self.analysis_cache = {}
+            
     def get_status(self):
         return {
             "service": "Analysis Service",
@@ -138,6 +141,11 @@ class AnalysisService:
         
         report_service.generate(event, "report.pdf")
         
+        self.analysis_cache[event.filename] = event
+        
         return event
+
+    def get_analysis(self, filename):
+        return self.analysis_cache.get(filename)
     
 analysis_service = AnalysisService()

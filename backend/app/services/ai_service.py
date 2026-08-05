@@ -132,5 +132,40 @@ class AIService:
         )
             
         return response.text
+
+    def build_chat_prompt(self, event, question):
+        return f"""
+You are Argus AI, an expert malware analyst.
+
+You have already analyzed the following file.
+
+Filename: {event.filename}
+Risk Score: {event.risk_score}/100
+Verdict: {event.verdict}
+
+Previous Analysis:
+{event.ai_explanation}
+
+The user now asks:
+
+{question}
+
+Answer only using the available analysis.
+
+If the analysis does not contain enough information,
+say so instead of making assumptions.
+
+Keep the answer concise, technical, and easy to understand.
+"""
+
+    def chat(self, event, question):
+        prompt = self.build_chat_prompt(event, question)
+
+        response = self.client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+        )
+
+        return response.text
                         
 ai_service = AIService()

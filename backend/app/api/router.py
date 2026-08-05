@@ -35,5 +35,6 @@ def upload_file(file: UploadFile = File(...)):
     
     return UploadResponse (
         filename  = file.filename,
-        sha256 = event.sha256
+        sha256 = event.sha256,
+        ai_explanation=event.ai_explanation
     )

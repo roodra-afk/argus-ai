@@ -11,6 +11,7 @@ from app.core.mime_types import EXPECTED_MIME_TYPES
 from app.core.file_types import EXPECTED_EXTENSIONS
 from app.core.signatures import FILE_SIGNATURES
 from app.models.security_event import SecurityEvent
+from app.services.ai_service import ai_service
 
 import mimetypes
 import os
@@ -127,12 +128,14 @@ class AnalysisService:
             event.pe_info = pe_service.get_summary(pe)
             event.signature_info = signature_service.get_summary(pe)
             event.mitre_info = mitre_service.get_summary(pe)
-                
-        risk = risk_service.get_summary(event)
 
+        risk = risk_service.get_summary(event)
+                
         event.risk_score = risk["score"]
         event.verdict = risk["verdict"]
-
+        
+        event.ai_explanation = ai_service.generate_explanation(event)
+        
         report_service.generate(event, "report.pdf")
         
         return event

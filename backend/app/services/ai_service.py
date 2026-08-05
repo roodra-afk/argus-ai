@@ -1,4 +1,16 @@
+import os
+
+from dotenv import load_dotenv
+from google import genai
+
 class AIService:
+    def __init__(self):
+           load_dotenv()
+       
+           self.client = genai.Client(
+               api_key=os.getenv("GEMINI_API_KEY")
+           )   
+           
     def get_status(self):
         return {
             "service": "AI Service",
@@ -55,5 +67,15 @@ class AIService:
         Recommendation:
         (One short paragraph.)
  """
-        
+
+    def generate_explanation(self, event):
+        prompt = self.build_prompt(event)
+            
+        response = self.client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+        )
+            
+        return response.text
+                        
 ai_service = AIService()

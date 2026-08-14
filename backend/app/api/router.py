@@ -1,16 +1,26 @@
+import json
+
 from fastapi import HTTPException
 from fastapi import APIRouter, UploadFile, File
 
 from app.core.config import settings
+
 from app.schemas.upload_response import UploadResponse
-from app.services.analysis_service import analysis_service
+from app.schemas.analysis_history import AnalysisHistoryItem
 from app.schemas.chat_request import ChatRequest
 from app.schemas.chat_response import ChatResponse
+
+from app.services.analysis_service import analysis_service
 from app.services.ai_service import ai_service
+
+from app.db.database import SessionLocal
+from app.repositories.analysis_repository import AnalysisRepository
+
 
 router = APIRouter(
     prefix="/api/v1"
 )
+
 
 @router.get("/")
 def root():
@@ -26,9 +36,11 @@ def health():
         "version": settings.version
     }
 
+
 @router.get("/analysis/status")
 def analysis_status():
     return analysis_service.get_status()
+
 
 @router.post(
     "/analysis/upload",
@@ -36,33 +48,86 @@ def analysis_status():
 )
 def upload_file(file: UploadFile = File(...)):
     event = analysis_service.analyze_file(file)
-    
+
     return UploadResponse(
         filename=file.filename,
         sha256=event.sha256,
-    
+
         detected_type=event.detected_type,
-    
+
         risk_score=event.risk_score,
         verdict=event.verdict,
-    
+
         vt_detections=event.virustotal_info["detections"],
         vt_total_engines=event.virustotal_info["total_engines"],
-    
+
         signed=event.signature_info["signed"],
-    
+
         pe_info=event.pe_info,
         mitre_info=event.mitre_info,
 
         ai_explanation=event.ai_explanation
     )
 
+
+@router.get(
+    "/analysis/{sha256}",
+    response_model=UploadResponse
+)
+def get_analysis_by_sha256(sha256: str):
+    db = SessionLocal()
+
+    try:
+        repository = AnalysisRepository(db)
+        analysis = repository.get_by_sha256(sha256)
+
+        if analysis is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Analysis not found."
+            )
+
+        return UploadResponse(
+            filename=analysis.filename,
+            sha256=analysis.sha256,
+
+            detected_type=analysis.detected_type,
+
+            risk_score=analysis.risk_score,
+            verdict=analysis.verdict,
+
+            vt_detections=analysis.vt_detections,
+            vt_total_engines=analysis.vt_total_engines,
+
+            signed=analysis.signed,
+
+            pe_info=(
+                json.loads(analysis.pe_info)
+                if analysis.pe_info
+                else None
+            ),
+
+            mitre_info=(
+                json.loads(analysis.mitre_info)
+                if analysis.mitre_info
+                else []
+            ),
+
+            ai_explanation=analysis.ai_explanation
+        )
+
+    finally:
+        db.close()
+
+
 @router.post(
     "/analysis/chat",
     response_model=ChatResponse
 )
 def chat(request: ChatRequest):
-    event = analysis_service.get_analysis(request.filename)
+    event = analysis_service.get_analysis_for_chat(
+        request.filename
+    )
 
     if event is None:
         raise HTTPException(

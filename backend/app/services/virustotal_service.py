@@ -7,8 +7,6 @@ class VirusTotalService:
     def __init__(self):
         load_dotenv()
         
-        print("API key:", os.getenv("VIRUSTOTAL_API_KEY"))
-        
         self.api_key=os.getenv("VIRUSTOTAL_API_KEY")
         self.base_url = "https://www.virustotal.com/api/v3"
         

@@ -1,0 +1,84 @@
+import json
+
+from sqlalchemy import select
+
+from app.db.models import Analysis
+
+
+class AnalysisRepository:
+
+    def __init__(self, db):
+        self.db = db
+
+    def save(self, event):
+        analysis = Analysis(
+            filename=event.filename,
+            sha256=event.sha256,
+            source=event.source,
+            file_size=event.file_size,
+            detected_type=event.detected_type,
+            risk_score=event.risk_score,
+            verdict=event.verdict,
+            vt_detections=(
+                event.virustotal_info.get("detections")
+                if event.virustotal_info
+                else None
+            ),
+            vt_total_engines=(
+                event.virustotal_info.get("total_engines")
+                if event.virustotal_info
+                else None
+            ),
+            signed=(
+                event.signature_info.get("signed")
+                if event.signature_info
+                else None
+            ),
+            pe_info=(
+                json.dumps(event.pe_info)
+                if event.pe_info
+                else None
+            ),
+            mitre_info=(
+                json.dumps(event.mitre_info)
+                if event.mitre_info
+                else None
+            ),
+            ai_explanation=event.ai_explanation,
+        )
+
+        self.db.add(analysis)
+        self.db.commit()
+        self.db.refresh(analysis)
+
+        return analysis
+
+    def get_by_sha256(self, sha256):
+        statement = (
+            select(Analysis)
+            .where(Analysis.sha256 == sha256)
+            .order_by(Analysis.created_at.desc())
+        )
+
+        return self.db.execute(statement).scalars().first()
+
+    def get_by_filename(self, filename):
+        statement = (
+            select(Analysis)
+            .where(Analysis.filename == filename)
+            .order_by(Analysis.created_at.desc())
+        )
+    
+        return self.db.execute(statement).scalars().first()
+
+    def list_recent(self, limit=20):
+        statement = (
+            select(Analysis)
+            .order_by(Analysis.created_at.desc())
+            .limit(limit)
+        )
+
+        return self.db.execute(statement).scalars().all()
+
+    def get_by_id(self, analysis_id):
+        return self.db.get(Analysis, analysis_id)

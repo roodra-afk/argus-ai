@@ -1,3 +1,7 @@
+import json
+
+from app.db.database import SessionLocal
+from app.repositories.analysis_repository import AnalysisRepository
 from app.services.report_service import report_service
 from app.services.mitre_service import mitre_service
 from app.services.virustotal_service import virustotal_service
@@ -19,7 +23,10 @@ import hashlib
 
 class AnalysisService:
     def __init__(self):
-            self.analysis_cache = {}
+        self.analysis_cache = {}
+    
+        self.db = SessionLocal()
+        self.analysis_repository = AnalysisRepository(self.db)
             
     def get_status(self):
         return {
@@ -143,9 +150,137 @@ class AnalysisService:
         
         self.analysis_cache[event.filename] = event
         
+        self.analysis_repository.save(event)
+        
         return event
 
     def get_analysis(self, filename):
         return self.analysis_cache.get(filename)
+
+    def get_persisted_analysis(self, sha256):
+        db = SessionLocal()
+    
+        try:
+            repository = AnalysisRepository(db)
+            analysis = repository.get_by_sha256(sha256)
+    
+            if analysis is None:
+                return None
+    
+            event = SecurityEvent(
+                filename=analysis.filename,
+                sha256=analysis.sha256,
+                source="database",
+                file_size=analysis.file_size,
+            )
+    
+            event.detected_type = analysis.detected_type
+            event.risk_score = analysis.risk_score
+            event.verdict = analysis.verdict
+    
+            event.validation_warnings = (
+                json.loads(analysis.validation_warnings)
+                if analysis.validation_warnings
+                else []
+            )
+    
+            event.pe_info = (
+                json.loads(analysis.pe_info)
+                if analysis.pe_info
+                else None
+            )
+    
+            event.string_info = (
+                json.loads(analysis.string_info)
+                if analysis.string_info
+                else None
+            )
+    
+            event.entropy_info = (
+                json.loads(analysis.entropy_info)
+                if analysis.entropy_info
+                else None
+            )
+    
+            event.signature_info = (
+                json.loads(analysis.signature_info)
+                if analysis.signature_info
+                else None
+            )
+    
+            event.virustotal_info = (
+                json.loads(analysis.virustotal_info)
+                if analysis.virustotal_info
+                else None
+            )
+    
+            event.mitre_info = (
+                json.loads(analysis.mitre_info)
+                if analysis.mitre_info
+                else []
+            )
+    
+            event.ai_explanation = analysis.ai_explanation
+    
+            return event
+    
+        finally:
+            db.close()
+    
+    def get_analysis_for_chat(self, filename):
+        # First try the in-memory cache
+        event = self.get_analysis(filename)
+    
+        if event is not None:
+            return event
+    
+        # Fall back to SQLite
+        db = SessionLocal()
+    
+        try:
+            repository = AnalysisRepository(db)
+            analysis = repository.get_by_filename(filename)
+    
+            if analysis is None:
+                return None
+    
+            event = SecurityEvent(
+                filename=analysis.filename,
+                sha256=analysis.sha256,
+                source=analysis.source,
+                file_size=analysis.file_size or 0,
+            )
+    
+            event.detected_type = analysis.detected_type
+            event.risk_score = analysis.risk_score
+            event.verdict = analysis.verdict
+    
+            event.virustotal_info = {
+                "detections": analysis.vt_detections,
+                "total_engines": analysis.vt_total_engines,
+            }
+    
+            event.signature_info = {
+                "signed": analysis.signed,
+            }
+    
+            event.pe_info = (
+                json.loads(analysis.pe_info)
+                if analysis.pe_info
+                else None
+            )
+    
+            event.mitre_info = (
+                json.loads(analysis.mitre_info)
+                if analysis.mitre_info
+                else []
+            )
+    
+            event.ai_explanation = analysis.ai_explanation
+    
+            return event
+    
+        finally:
+            db.close()
     
 analysis_service = AnalysisService()

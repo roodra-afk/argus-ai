@@ -1,3 +1,4 @@
+import PEInfoCard from "./PEInfoCard";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,8 @@ export default function AnalysisCard({ analysis }) {
     }
 
     return (
-        <Card className="mt-8 border border-slate-800 bg-slate-900 shadow-xl">
+        <>
+            <Card className="mt-8 border border-slate-800 bg-slate-900 shadow-xl">
             <CardContent className="p-8">
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-semibold text-white">
@@ -159,5 +161,11 @@ export default function AnalysisCard({ analysis }) {
                 </div>
             </CardContent>
         </Card>
+
+        <PEInfoCard
+            peInfo={analysis.pe_info}
+            mitreInfo={analysis.mitre_info}
+        />
+        </>
     );
 }

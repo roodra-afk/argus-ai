@@ -51,6 +51,9 @@ def upload_file(file: UploadFile = File(...)):
     
         signed=event.signature_info["signed"],
     
+        pe_info=event.pe_info,
+        mitre_info=event.mitre_info,
+
         ai_explanation=event.ai_explanation
     )
 

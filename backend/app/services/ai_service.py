@@ -1,4 +1,5 @@
 import os
+import time
 
 from dotenv import load_dotenv
 from google import genai
@@ -18,120 +19,174 @@ class AIService:
         }
 
     def build_prompt(self, event):
-        mitre_text = (
-            "\n".join(
-                f"- {t['technique']} - {t['name']}"
-                for t in event.mitre_info
+        # MITRE ATT&CK evidence
+        if event.mitre_info:
+            mitre_text = "\n".join(
+                f"- {technique['technique']} - {technique['name']} "
+                f"(confidence: {technique['confidence']}; "
+                f"evidence: {', '.join(technique['evidence'])})"
+                for technique in event.mitre_info
             )
-            if event.mitre_info
-            else "None"
-        )
+        else:
+            mitre_text = "None"
+    
+        # Suspicious APIs
+        if event.pe_info and event.pe_info.get("suspicious_apis"):
+            suspicious_apis = "\n".join(
+                f"- {api}"
+                for api in event.pe_info["suspicious_apis"]
+            )
+        else:
+            suspicious_apis = "None"
+    
+        # Packer indicators
+        if (
+            event.pe_info
+            and event.pe_info.get("packer")
+            and event.pe_info["packer"].get("reasons")
+        ):
+            packer_reasons = "\n".join(
+                f"- {reason}"
+                for reason in event.pe_info["packer"]["reasons"]
+            )
+        else:
+            packer_reasons = "None"
+    
+        # Validation warnings
+        if event.validation_warnings:
+            validation_warnings = "\n".join(
+                f"- {warning}"
+                for warning in event.validation_warnings
+            )
+        else:
+            validation_warnings = "None"
+    
+        # PE information
+        if event.pe_info:
+            architecture = event.pe_info.get("architecture", "N/A")
+            section_count = event.pe_info.get("section_count", "N/A")
+            entry_point = event.pe_info.get("entry_point", "N/A")
+        else:
+            architecture = "N/A"
+            section_count = "N/A"
+            entry_point = "N/A"
+    
+        # Entropy
+        if event.entropy_info:
+            average_entropy = event.entropy_info.get("entropy", "N/A")
+        else:
+            average_entropy = "N/A"
+    
+        # VirusTotal
+        if event.virustotal_info:
+            vt_detections = event.virustotal_info.get("detections", "N/A")
+            vt_total = event.virustotal_info.get("total_engines", "N/A")
+            virustotal = f"{vt_detections}/{vt_total}"
+        else:
+            virustotal = "Unavailable"
+    
+        # Digital signature
+        if event.signature_info:
+            signed = event.signature_info.get("signed", "Unknown")
+        else:
+            signed = "Unknown"
     
         return f"""
     You are Argus AI, an expert malware analyst.
     
-    Your task is to explain the malware analysis results produced by Argus AI.
+    Analyze the following static malware-analysis evidence.
     
-    Do not invent evidence.
-    Only use the information provided below.
-    If there is not enough evidence, explicitly say so.
+    STRICT RULES:
+    - Use only the evidence provided below.
+    - Do not invent facts.
+    - Do not assume that common Windows APIs are malicious.
+    - A digital signature does not prove that a file is safe.
+    - A low VirusTotal detection count does not prove that a detection is a false positive.
+    - If VirusTotal reports detections, acknowledge them accurately.
+    - Do not claim that a packer exists or does not exist.
+    - If the packer heuristic found nothing, say "no packer indicators were detected".
+    - Explain MITRE ATT&CK mappings using the supplied evidence.
+    - If the evidence is insufficient for a conclusion, explicitly say so.
+    - Do not make claims stronger than the evidence supports.
     
-    Base every conclusion on the observed evidence.
-    
-    Do not classify software as malicious solely because it imports common Windows APIs.
-    
-    Treat valid digital signatures and low VirusTotal detection counts as evidence that may reduce confidence in a malicious assessment.
-    
-    When mentioning MITRE ATT&CK techniques, explain why the observed behavior maps to those techniques instead of simply listing them.
-
-    Do not state that a feature is absent unless the analysis explicitly proves it.
-    For heuristic-based checks such as packer detection, describe the result as "no packer indicators were detected" instead of claiming that no packer exists.
-    
+    FILE
     Filename: {event.filename}
     Risk Score: {event.risk_score}/100
     Verdict: {event.verdict}
     
-    PE Information:
-    - Architecture: {event.pe_info["architecture"] if event.pe_info else "N/A"}
-    - Sections: {event.pe_info["section_count"] if event.pe_info else "N/A"}
-    - Entry Point: {event.pe_info["entry_point"] if event.pe_info else "N/A"}    
-    Suspicious APIs:
-    {
-    "\n".join(
-        f"- {api}"
-        for api in event.pe_info["suspicious_apis"]
-    ) if event.pe_info and event.pe_info["suspicious_apis"] else "None"
-    }
+    PE INFORMATION
+    Architecture: {architecture}
+    Sections: {section_count}
+    Entry Point: {entry_point}
     
-    Packer Detection:
-    {
-    "\n".join(
-        f"- {reason}"
-        for reason in event.pe_info["packer"]["reasons"]
-    )
-    if (
-        event.pe_info
-        and event.pe_info.get("packer")
-        and event.pe_info["packer"]["reasons"]
-    )
-    else "None Detected"
-    }
+    SUSPICIOUS APIs
+    {suspicious_apis}
     
-    Validation Warnings:
-    {
-    "\n".join(
-        f"- {warning}"
-        for warning in event.validation_warnings
-    ) if event.validation_warnings else "None"
-    }
+    PACKER ANALYSIS
+    {packer_reasons}
     
-    Entropy:
-    - Average Entropy: {
-    event.entropy_info["entropy"]
-    if event.entropy_info
-    else "N/A"
-    }
+    VALIDATION WARNINGS
+    {validation_warnings}
     
-    VirusTotal:
-    - Detections: {
-    f"{event.virustotal_info['detections']}/{event.virustotal_info['total_engines']}"
-    if event.virustotal_info
-    else "Unavailable"
-    }
+    ENTROPY
+    Average Entropy: {average_entropy}
     
-    Digital Signature:
-    - Signed: {
-    event.signature_info["signed"]
-    if event.signature_info
-    else "Unknown"
-    }
+    VIRUSTOTAL
+    Detections: {virustotal}
     
-    MITRE ATT&CK:
+    DIGITAL SIGNATURE
+    Signed: {signed}
+    
+    MITRE ATT&CK
     {mitre_text}
     
-    Provide your response using the following format:
+    Respond using exactly this structure:
     
     Summary:
-    (One short paragraph.)
+    One short evidence-based paragraph.
     
     Key Findings:
-    - Bullet point
-    - Bullet point
-    - Bullet point
+    - Evidence-based finding
+    - Evidence-based finding
+    - Evidence-based finding
     
     Recommendation:
-    (One short paragraph.)
+    One short evidence-based paragraph.
     """
 
     def generate_explanation(self, event):
         prompt = self.build_prompt(event)
-            
-        response = self.client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
+    
+        print(f"AI prompt length: {len(prompt)}")
+    
+        for attempt in range(3):
+            try:
+                response = self.client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=prompt,
+                )
+    
+                print(
+                    f"AI explanation generated successfully "
+                    f"(attempt {attempt + 1})."
+                )
+    
+                return response.text
+    
+            except Exception as error:
+                print(
+                    f"AI explanation attempt {attempt + 1} failed: "
+                    f"{type(error).__name__}: {error}"
+                )
+    
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+    
+        return (
+            "AI explanation temporarily unavailable. "
+            "The static analysis completed successfully, "
+            "but the AI analysis service encountered an error."
         )
-            
-        return response.text
 
     def build_chat_prompt(self, event, question):
         return f"""

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 
 import AnalysisCard from "./AnalysisCard";
+import AIChatCard from "./AIChatCard";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,6 +110,10 @@ export default function UploadCard() {
             </Card>
 
             <AnalysisCard analysis={analysis} />
+            
+            {analysis && (
+                <AIChatCard filename={analysis.filename} />
+            )}
         </>
     );
 }

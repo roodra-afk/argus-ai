@@ -162,7 +162,7 @@ class AIService:
         for attempt in range(3):
             try:
                 response = self.client.models.generate_content(
-                    model="gemini-3.6-flash",
+                    model="gemini-3.5-flash",
                     contents=prompt,
                 )
     
@@ -217,7 +217,7 @@ Keep the answer concise, technical, and easy to understand.
         prompt = self.build_chat_prompt(event, question)
 
         response = self.client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-3.5-flash",
             contents=prompt,
         )
 

@@ -1,7 +1,6 @@
 import json
 
-from fastapi import HTTPException
-from fastapi import APIRouter, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -15,7 +14,7 @@ from app.services.analysis_service import analysis_service
 from app.services.ai_service import ai_service
 from app.services.report_service import report_service
 
-from app.db.database import SessionLocal
+from app.db.database import get_db
 from app.repositories.analysis_repository import AnalysisRepository
 
 
@@ -48,8 +47,14 @@ def analysis_status():
     "/analysis/upload",
     response_model=UploadResponse
 )
-def upload_file(file: UploadFile = File(...)):
-    event = analysis_service.analyze_file(file)
+def upload_file(
+    file: UploadFile = File(...),
+    db=Depends(get_db),
+):
+    event = analysis_service.analyze_file(
+        file,
+        db,
+    )
 
     return UploadResponse(
         filename=file.filename,
@@ -80,64 +85,55 @@ def analysis_history(
     search: str | None = None,
     verdict: str = "All",
     sort: str = "newest",
+    db=Depends(get_db),
 ):
-    db = SessionLocal()
+    repository = AnalysisRepository(db)
 
-    try:
-        repository = AnalysisRepository(db)
+    result = repository.list_recent(
+        page=page,
+        limit=limit,
+        search=search,
+        verdict=verdict,
+        sort=sort,
+    )
 
-        result = repository.list_recent(
-            page=page,
-            limit=limit,
-            search=search,
-            verdict=verdict,
-            sort=sort,
-        )
+    total = result["total"]
 
-        total = result["total"]
+    total_pages = (
+        (total + limit - 1) // limit
+        if total > 0
+        else 0
+    )
 
-        total_pages = (
-            (total + limit - 1) // limit
-            if total > 0
-            else 0
-        )
-
-        return {
-            "items": [
-                AnalysisHistoryItem(
-                    id=analysis.id,
-                    filename=analysis.filename,
-                    sha256=analysis.sha256,
-                    detected_type=analysis.detected_type,
-                    risk_score=analysis.risk_score,
-                    verdict=analysis.verdict,
-                    vt_detections=analysis.vt_detections,
-                    vt_total_engines=analysis.vt_total_engines,
-                    signed=analysis.signed,
-                    created_at=analysis.created_at,
-                )
-                for analysis in result["items"]
-            ],
-            "total": total,
-            "page": page,
-            "limit": limit,
-            "total_pages": total_pages,
-        }
-
-    finally:
-        db.close()
+    return {
+        "items": [
+            AnalysisHistoryItem(
+                id=analysis.id,
+                filename=analysis.filename,
+                sha256=analysis.sha256,
+                detected_type=analysis.detected_type,
+                risk_score=analysis.risk_score,
+                verdict=analysis.verdict,
+                vt_detections=analysis.vt_detections,
+                vt_total_engines=analysis.vt_total_engines,
+                signed=analysis.signed,
+                created_at=analysis.created_at,
+            )
+            for analysis in result["items"]
+        ],
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
+    }
 
 @router.get("/analysis/stats")
-def analysis_stats():
-    db = SessionLocal()
+def analysis_stats(
+    db=Depends(get_db),
+):
+    repository = AnalysisRepository(db)
 
-    try:
-        repository = AnalysisRepository(db)
-
-        return repository.get_stats()
-
-    finally:
-        db.close()
+    return repository.get_stats()
 
 @router.get("/analysis/{sha256}/report")
 def download_report(sha256: str):
@@ -159,59 +155,61 @@ def download_report(sha256: str):
     "/analysis/{sha256}",
     response_model=UploadResponse
 )
-def get_analysis_by_sha256(sha256: str):
-    db = SessionLocal()
+def get_analysis_by_sha256(
+    sha256: str,
+    db=Depends(get_db),
+):
+    repository = AnalysisRepository(db)
 
-    try:
-        repository = AnalysisRepository(db)
-        analysis = repository.get_by_sha256(sha256)
+    analysis = repository.get_by_sha256(sha256)
 
-        if analysis is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Analysis not found."
-            )
-
-        return UploadResponse(
-            filename=analysis.filename,
-            sha256=analysis.sha256,
-
-            detected_type=analysis.detected_type,
-
-            risk_score=analysis.risk_score,
-            verdict=analysis.verdict,
-
-            vt_detections=analysis.vt_detections,
-            vt_total_engines=analysis.vt_total_engines,
-
-            signed=analysis.signed,
-
-            pe_info=(
-                json.loads(analysis.pe_info)
-                if analysis.pe_info
-                else None
-            ),
-
-            mitre_info=(
-                json.loads(analysis.mitre_info)
-                if analysis.mitre_info
-                else []
-            ),
-
-            ai_explanation=analysis.ai_explanation
+    if analysis is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found."
         )
 
-    finally:
-        db.close()
+    return UploadResponse(
+        filename=analysis.filename,
+        sha256=analysis.sha256,
+
+        detected_type=analysis.detected_type,
+
+        risk_score=analysis.risk_score,
+        verdict=analysis.verdict,
+
+        vt_detections=analysis.vt_detections,
+        vt_total_engines=analysis.vt_total_engines,
+
+        signed=analysis.signed,
+
+        pe_info=(
+            json.loads(analysis.pe_info)
+            if analysis.pe_info
+            else None
+        ),
+
+        mitre_info=(
+            json.loads(analysis.mitre_info)
+            if analysis.mitre_info
+            else []
+        ),
+
+        ai_explanation=analysis.ai_explanation
+    )
 
 
 @router.post(
     "/analysis/chat",
     response_model=ChatResponse
 )
-def chat(request: ChatRequest):
+def chat(
+    request: ChatRequest,
+    db=Depends(get_db),
+):
     event = analysis_service.get_analysis_for_chat(
-        request.filename
+        request.filename,
+        db,
     )
 
     if event is None:

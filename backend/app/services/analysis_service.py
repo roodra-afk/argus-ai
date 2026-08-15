@@ -118,10 +118,14 @@ class AnalysisService:
         existing_analysis = repository.get_by_sha256(sha256)
     
         if existing_analysis is not None:
-            return self.get_persisted_analysis(
+            event = self.get_persisted_analysis(
                 sha256,
                 db,
             )
+        
+            event.reused = True
+        
+            return event
     
         event = SecurityEvent(
             filename=file.filename,

@@ -44,6 +44,8 @@ class UploadResponse(BaseModel):
     filename: str
     sha256: str
 
+    reused: bool = False
+
     detected_type: str
 
     risk_score: int

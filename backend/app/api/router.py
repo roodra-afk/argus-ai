@@ -60,6 +60,8 @@ def upload_file(
         filename=file.filename,
         sha256=event.sha256,
 
+        reused=event.reused,
+
         detected_type=event.detected_type,
 
         risk_score=event.risk_score,

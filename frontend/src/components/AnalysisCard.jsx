@@ -124,6 +124,12 @@ export default function AnalysisCard({ analysis }) {
                                     <Download className="h-4 w-4" />
                                     Download Report
                                 </button>
+
+                                {analysis.reused && (
+                                    <Badge className="border-blue-500/30 bg-blue-950/50 px-4 py-2 text-sm font-semibold text-blue-300">
+                                        Previously Analyzed
+                                    </Badge>
+                                )}
                             
                                 <Badge
                                     className={`w-fit border px-4 py-2 text-sm font-semibold ${verdictStyles.badge}`}

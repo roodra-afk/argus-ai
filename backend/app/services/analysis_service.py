@@ -112,7 +112,17 @@ class AnalysisService:
         
     def analyze_file(self, file, db):
         sha256 = self.calc_sha256(file)
-
+    
+        repository = AnalysisRepository(db)
+    
+        existing_analysis = repository.get_by_sha256(sha256)
+    
+        if existing_analysis is not None:
+            return self.get_persisted_analysis(
+                sha256,
+                db,
+            )
+    
         event = SecurityEvent(
             filename=file.filename,
             sha256=sha256,
@@ -146,7 +156,6 @@ class AnalysisService:
         
         self.analysis_cache[event.filename] = event
         
-        repository = AnalysisRepository(db)
         repository.save(event)
         
         return event
@@ -165,47 +174,17 @@ class AnalysisService:
         event = SecurityEvent(
             filename=analysis.filename,
             sha256=analysis.sha256,
-            source="database",
-            file_size=analysis.file_size,
+            source=analysis.source,
+            file_size=analysis.file_size or 0,
         )
     
         event.detected_type = analysis.detected_type
         event.risk_score = analysis.risk_score
         event.verdict = analysis.verdict
     
-        event.validation_warnings = (
-            json.loads(analysis.validation_warnings)
-            if analysis.validation_warnings
-            else []
-        )
-    
         event.pe_info = (
             json.loads(analysis.pe_info)
             if analysis.pe_info
-            else None
-        )
-    
-        event.string_info = (
-            json.loads(analysis.string_info)
-            if analysis.string_info
-            else None
-        )
-    
-        event.entropy_info = (
-            json.loads(analysis.entropy_info)
-            if analysis.entropy_info
-            else None
-        )
-    
-        event.signature_info = (
-            json.loads(analysis.signature_info)
-            if analysis.signature_info
-            else None
-        )
-    
-        event.virustotal_info = (
-            json.loads(analysis.virustotal_info)
-            if analysis.virustotal_info
             else None
         )
     
@@ -214,6 +193,15 @@ class AnalysisService:
             if analysis.mitre_info
             else []
         )
+    
+        event.virustotal_info = {
+            "detections": analysis.vt_detections,
+            "total_engines": analysis.vt_total_engines,
+        }
+    
+        event.signature_info = {
+            "signed": analysis.signed,
+        }
     
         event.ai_explanation = analysis.ai_explanation
     

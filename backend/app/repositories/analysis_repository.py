@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.models import Analysis
 
@@ -79,6 +79,42 @@ class AnalysisRepository:
         )
 
         return self.db.execute(statement).scalars().all()
+
+    def get_stats(self):
+        total = self.db.scalar(
+            select(func.count(Analysis.id))
+        )
+    
+        malicious = self.db.scalar(
+            select(func.count(Analysis.id))
+            .where(Analysis.verdict == "Malicious")
+        )
+    
+        suspicious = self.db.scalar(
+            select(func.count(Analysis.id))
+            .where(Analysis.verdict == "Suspicious")
+        )
+    
+        benign = self.db.scalar(
+            select(func.count(Analysis.id))
+            .where(Analysis.verdict == "Benign")
+        )
+    
+        average_risk = self.db.scalar(
+            select(func.avg(Analysis.risk_score))
+        )
+    
+        return {
+            "total": total or 0,
+            "malicious": malicious or 0,
+            "suspicious": suspicious or 0,
+            "benign": benign or 0,
+            "average_risk": (
+                round(float(average_risk), 2)
+                if average_risk is not None
+                else 0
+            ),
+        }
 
     def get_by_id(self, analysis_id):
         return self.db.get(Analysis, analysis_id)

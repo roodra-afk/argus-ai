@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import UploadCard from "@/components/UploadCard";
 import AnalysisHistory from "@/components/AnalysisHistory";
+import ThreatOverview from "@/components/ThreatOverview";
 
 export default function Dashboard() {
     const [analysis, setAnalysis] = useState(null);
@@ -18,6 +19,8 @@ export default function Dashboard() {
                         AI-Powered Malware Analysis Platform
                     </p>
                 </header>
+
+				<ThreatOverview />
 
                 <UploadCard
                     analysis={analysis}

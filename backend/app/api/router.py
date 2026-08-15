@@ -102,6 +102,18 @@ def analysis_history():
     finally:
         db.close()
 
+@router.get("/analysis/stats")
+def analysis_stats():
+    db = SessionLocal()
+
+    try:
+        repository = AnalysisRepository(db)
+
+        return repository.get_stats()
+
+    finally:
+        db.close()
+
 @router.get("/analysis/{sha256}/report")
 def download_report(sha256: str):
     report_path = report_service.get_report_path(sha256)

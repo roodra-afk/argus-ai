@@ -7,12 +7,11 @@ import AIChatCard from "./AIChatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function UploadCard() {
+export default function UploadCard({ analysis, setAnalysis }) {
     const fileInputRef = useRef(null);
 
     const [selectedFile, setSelectedFile] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [analysis, setAnalysis] = useState(null);
 
     async function analyzeFile() {
         if (!selectedFile) return;

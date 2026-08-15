@@ -69,6 +69,36 @@ def upload_file(file: UploadFile = File(...)):
         ai_explanation=event.ai_explanation
     )
 
+@router.get(
+    "/analysis/history",
+    response_model=list[AnalysisHistoryItem]
+)
+
+def analysis_history():
+    db = SessionLocal()
+
+    try:
+        repository = AnalysisRepository(db)
+        analyses = repository.list_recent()
+
+        return [
+            AnalysisHistoryItem(
+                id=analysis.id,
+                filename=analysis.filename,
+                sha256=analysis.sha256,
+                detected_type=analysis.detected_type,
+                risk_score=analysis.risk_score,
+                verdict=analysis.verdict,
+                vt_detections=analysis.vt_detections,
+                vt_total_engines=analysis.vt_total_engines,
+                signed=analysis.signed,
+                created_at=analysis.created_at,
+            )
+            for analysis in analyses
+        ]
+
+    finally:
+        db.close()
 
 @router.get(
     "/analysis/{sha256}",

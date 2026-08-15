@@ -3,7 +3,7 @@ import { ShieldAlert, ShieldCheck, ShieldX, Activity } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function ThreatOverview() {
+export default function ThreatOverview({ refreshTrigger }) {
     const [stats, setStats] = useState(null);
     const [error, setError] = useState(false);
 
@@ -29,7 +29,7 @@ export default function ThreatOverview() {
 
     useEffect(() => {
         loadStats();
-    }, []);
+    }, [refreshTrigger]);
 
     if (error) {
         return null;

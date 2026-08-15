@@ -7,7 +7,11 @@ import AIChatCard from "./AIChatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function UploadCard({ analysis, setAnalysis }) {
+export default function UploadCard({
+    analysis,
+    setAnalysis,
+    onAnalysisComplete,
+}) {
     const fileInputRef = useRef(null);
 
     const [selectedFile, setSelectedFile] = useState(null);
@@ -37,6 +41,7 @@ export default function UploadCard({ analysis, setAnalysis }) {
             const data = await response.json();
 
             setAnalysis(data);
+            onAnalysisComplete();
         } catch (error) {
             console.error(error);
             alert("Failed to analyze the file.");

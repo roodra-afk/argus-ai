@@ -11,6 +11,7 @@ export default function UploadCard({
     analysis,
     setAnalysis,
     onAnalysisComplete,
+    onNewAnalysis,
 }) {
     const fileInputRef = useRef(null);
 
@@ -39,8 +40,8 @@ export default function UploadCard({
             }
 
             const data = await response.json();
-
-            setAnalysis(data);
+            
+            onNewAnalysis(data);
             onAnalysisComplete();
         } catch (error) {
             console.error(error);

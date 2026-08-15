@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,13 +13,33 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
     const [verdictFilter, setVerdictFilter] = useState("All");
     const [sortBy, setSortBy] = useState("newest");
 
-    async function loadHistory() {
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    async function loadHistory(targetPage = page) {
         setLoading(true);
         setError(null);
 
         try {
+            const params = new URLSearchParams({
+                page: targetPage.toString(),
+                limit: limit.toString(),
+                sort: sortBy,
+            });
+
+            if (search.trim()) {
+                params.set("search", search.trim());
+            }
+
+            if (verdictFilter !== "All") {
+                params.set("verdict", verdictFilter);
+            }
+
             const response = await fetch(
-                "http://localhost:8000/api/v1/analysis/history"
+                `http://localhost:8000/api/v1/analysis/history?${params.toString()}`
             );
 
             if (!response.ok) {
@@ -28,7 +48,9 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
 
             const data = await response.json();
 
-            setAnalyses(data);
+            setAnalyses(data.items);
+            setTotal(data.total);
+            setTotalPages(data.total_pages);
         } catch (error) {
             console.error(error);
             setError("Unable to load analysis history.");
@@ -57,48 +79,31 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
     }
 
     useEffect(() => {
-        loadHistory();
-    }, []);
+        loadHistory(1);
+    }, [search, verdictFilter, sortBy]);
 
-    const filteredAnalyses = useMemo(() => {
-        const normalizedSearch = search.trim().toLowerCase();
+    useEffect(() => {
+        loadHistory(page);
+    }, [page]);
 
-        const result = analyses.filter((analysis) => {
-            const matchesSearch =
-                !normalizedSearch ||
-                analysis.filename.toLowerCase().includes(normalizedSearch) ||
-                analysis.sha256.toLowerCase().includes(normalizedSearch);
+    function handleSearchChange(event) {
+        setSearch(event.target.value);
+        setPage(1);
+    }
 
-            const matchesVerdict =
-                verdictFilter === "All" ||
-                analysis.verdict === verdictFilter;
+    function handleVerdictChange(event) {
+        setVerdictFilter(event.target.value);
+        setPage(1);
+    }
 
-            return matchesSearch && matchesVerdict;
-        });
+    function handleSortChange(event) {
+        setSortBy(event.target.value);
+        setPage(1);
+    }
 
-        return [...result].sort((a, b) => {
-            switch (sortBy) {
-                case "oldest":
-                    return (
-                        new Date(a.created_at) -
-                        new Date(b.created_at)
-                    );
-
-                case "highest-risk":
-                    return (b.risk_score ?? 0) - (a.risk_score ?? 0);
-
-                case "lowest-risk":
-                    return (a.risk_score ?? 0) - (b.risk_score ?? 0);
-
-                case "newest":
-                default:
-                    return (
-                        new Date(b.created_at) -
-                        new Date(a.created_at)
-                    );
-            }
-        });
-    }, [analyses, search, verdictFilter, sortBy]);
+    function handleRefresh() {
+        loadHistory(page);
+    }
 
     return (
         <Card className="mt-8 border border-slate-800 bg-slate-900 shadow-xl">
@@ -117,7 +122,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={loadHistory}
+                        onClick={handleRefresh}
                         disabled={loading}
                     >
                         <RefreshCw className="mr-2 h-4 w-4" />
@@ -125,7 +130,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                     </Button>
                 </div>
 
-                {!loading && !error && analyses.length > 0 && (
+                {!error && (
                     <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -133,7 +138,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={handleSearchChange}
                                 placeholder="Search filename or SHA256..."
                                 className="w-full rounded-md border border-slate-700 bg-slate-950 py-2 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
                             />
@@ -141,9 +146,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
 
                         <select
                             value={verdictFilter}
-                            onChange={(e) =>
-                                setVerdictFilter(e.target.value)
-                            }
+                            onChange={handleVerdictChange}
                             className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
                         >
                             <option value="All">All Verdicts</option>
@@ -154,7 +157,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
 
                         <select
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
+                            onChange={handleSortChange}
                             className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
                         >
                             <option value="newest">Newest First</option>
@@ -178,31 +181,32 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                         {error}
                     </div>
                 ) : analyses.length === 0 ? (
-                    <div className="mt-8 text-center text-slate-500">
-                        No analyses found.
-                    </div>
-                ) : filteredAnalyses.length === 0 ? (
                     <div className="mt-8 rounded-lg border border-slate-800 bg-slate-950 p-8 text-center">
                         <p className="text-slate-400">
-                            No analyses match your filters.
+                            {total === 0
+                                ? "No analyses match your filters."
+                                : "No analyses found."}
                         </p>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSearch("");
-                                setVerdictFilter("All");
-                            }}
-                            className="mt-3 text-sm text-blue-400 hover:text-blue-300"
-                        >
-                            Clear filters
-                        </button>
+                        {total === 0 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearch("");
+                                    setVerdictFilter("All");
+                                    setPage(1);
+                                }}
+                                className="mt-3 text-sm text-blue-400 hover:text-blue-300"
+                            >
+                                Clear filters
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <>
                         <div className="mt-4 text-xs text-slate-500">
-                            Showing {filteredAnalyses.length} of{" "}
-                            {analyses.length} analyses
+                            Showing page {page} of {totalPages} • {total} total
+                            analyses
                         </div>
 
                         <div className="mt-3 overflow-x-auto">
@@ -234,7 +238,7 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                                 </thead>
 
                                 <tbody>
-                                    {filteredAnalyses.map((analysis) => (
+                                    {analyses.map((analysis) => (
                                         <tr
                                             key={analysis.id}
                                             className="border-b border-slate-800/60 transition-colors hover:bg-slate-800/40"
@@ -306,6 +310,38 @@ export default function AnalysisHistory({ onSelectAnalysis }) {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div className="mt-6 flex items-center justify-between border-t border-slate-800 pt-5">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page <= 1 || loading}
+                                onClick={() =>
+                                    setPage((current) => current - 1)
+                                }
+                            >
+                                <ChevronLeft className="mr-2 h-4 w-4" />
+                                Previous
+                            </Button>
+
+                            <span className="text-sm text-slate-400">
+                                Page {page} of {totalPages}
+                            </span>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                    page >= totalPages || loading
+                                }
+                                onClick={() =>
+                                    setPage((current) => current + 1)
+                                }
+                            >
+                                Next
+                                <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
                         </div>
                     </>
                 )}

@@ -1,7 +1,7 @@
 import json
 
 from fastapi import HTTPException
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -73,31 +73,56 @@ def upload_file(file: UploadFile = File(...)):
 
 @router.get(
     "/analysis/history",
-    response_model=list[AnalysisHistoryItem]
 )
-
-def analysis_history():
+def analysis_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str | None = None,
+    verdict: str = "All",
+    sort: str = "newest",
+):
     db = SessionLocal()
 
     try:
         repository = AnalysisRepository(db)
-        analyses = repository.list_recent()
 
-        return [
-            AnalysisHistoryItem(
-                id=analysis.id,
-                filename=analysis.filename,
-                sha256=analysis.sha256,
-                detected_type=analysis.detected_type,
-                risk_score=analysis.risk_score,
-                verdict=analysis.verdict,
-                vt_detections=analysis.vt_detections,
-                vt_total_engines=analysis.vt_total_engines,
-                signed=analysis.signed,
-                created_at=analysis.created_at,
-            )
-            for analysis in analyses
-        ]
+        result = repository.list_recent(
+            page=page,
+            limit=limit,
+            search=search,
+            verdict=verdict,
+            sort=sort,
+        )
+
+        total = result["total"]
+
+        total_pages = (
+            (total + limit - 1) // limit
+            if total > 0
+            else 0
+        )
+
+        return {
+            "items": [
+                AnalysisHistoryItem(
+                    id=analysis.id,
+                    filename=analysis.filename,
+                    sha256=analysis.sha256,
+                    detected_type=analysis.detected_type,
+                    risk_score=analysis.risk_score,
+                    verdict=analysis.verdict,
+                    vt_detections=analysis.vt_detections,
+                    vt_total_engines=analysis.vt_total_engines,
+                    signed=analysis.signed,
+                    created_at=analysis.created_at,
+                )
+                for analysis in result["items"]
+            ],
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }
 
     finally:
         db.close()

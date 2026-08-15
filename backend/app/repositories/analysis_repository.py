@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, select
 
 from app.db.models import Analysis
 
@@ -71,14 +71,73 @@ class AnalysisRepository:
     
         return self.db.execute(statement).scalars().first()
 
-    def list_recent(self, limit=20):
+    def list_recent(
+        self,
+        page=1,
+        limit=10,
+        search=None,
+        verdict=None,
+        sort="newest",
+    ):
+        statement = select(Analysis)
+    
+        if search:
+            search_pattern = f"%{search.lower()}%"
+    
+            statement = statement.where(
+                func.lower(Analysis.filename).like(search_pattern)
+                | func.lower(Analysis.sha256).like(search_pattern)
+            )
+    
+        if verdict and verdict != "All":
+            statement = statement.where(
+                Analysis.verdict == verdict
+            )
+    
+        if sort == "oldest":
+            statement = statement.order_by(
+                asc(Analysis.created_at)
+            )
+    
+        elif sort == "highest-risk":
+            statement = statement.order_by(
+                desc(Analysis.risk_score)
+            )
+    
+        elif sort == "lowest-risk":
+            statement = statement.order_by(
+                asc(Analysis.risk_score)
+            )
+    
+        else:
+            statement = statement.order_by(
+                desc(Analysis.created_at)
+            )
+    
+        count_statement = select(
+            func.count()
+        ).select_from(
+            statement.subquery()
+        )
+    
+        total = self.db.scalar(count_statement) or 0
+    
+        offset = (page - 1) * limit
+    
         statement = (
-            select(Analysis)
-            .order_by(Analysis.created_at.desc())
+            statement
+            .offset(offset)
             .limit(limit)
         )
-
-        return self.db.execute(statement).scalars().all()
+    
+        analyses = self.db.execute(
+            statement
+        ).scalars().all()
+    
+        return {
+            "items": analyses,
+            "total": total,
+        }
 
     def get_stats(self):
         total = self.db.scalar(

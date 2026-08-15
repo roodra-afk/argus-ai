@@ -1,15 +1,29 @@
 from xml.sax.saxutils import escape
 from datetime import datetime
+from pathlib import Path
+
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 
 
 class ReportService:
+    def __init__(self):
+        self.reports_dir = (
+            Path(__file__).resolve().parents[2] / "reports"
+        )
+        self.reports_dir.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
     def get_status(self):
         return {
             "service": "Report Service",
             "status": "ready"
         }
+
+    def get_report_path(self, sha256):
+        return self.reports_dir / f"{sha256}.pdf"
 
     def add_heading(self, story, styles, title):
         story.append(
@@ -18,20 +32,33 @@ class ReportService:
                 styles["Heading2"]
             )
         )
-        story.append(Paragraph("", styles["BodyText"]))
 
-    def add_field(self, story, styles, label, value):
         story.append(
             Paragraph(
-                f"<b>{label}:</b> {value}",
+                "",
                 styles["BodyText"]
             )
         )
 
-    def generate(self, event, output_path):
+    def add_field(self, story, styles, label, value):
+        story.append(
+            Paragraph(
+                f"<b>{escape(str(label))}:</b> "
+                f"{escape(str(value))}",
+                styles["BodyText"]
+            )
+        )
+
+    def generate(self, event):
         styles = getSampleStyleSheet()
 
-        doc = SimpleDocTemplate(output_path)
+        output_path = self.get_report_path(
+            event.sha256
+        )
+
+        doc = SimpleDocTemplate(
+            str(output_path)
+        )
 
         story = []
 
@@ -48,61 +75,61 @@ class ReportService:
                 styles["BodyText"]
             )
         )
-        
+
         self.add_heading(
             story,
             styles,
             "Executive Summary"
         )
-        
+
         self.add_field(
             story,
             styles,
             "Filename",
             event.filename
         )
-        
+
         self.add_field(
             story,
             styles,
             "Risk Score",
             f"{event.risk_score}/100"
         )
-        
+
         self.add_field(
             story,
             styles,
             "Verdict",
             event.verdict
         )
-        
+
         self.add_heading(
             story,
             styles,
             "File Information"
         )
-        
+
         self.add_field(
             story,
             styles,
             "SHA256",
             event.sha256
         )
-        
+
         self.add_field(
             story,
             styles,
             "File Size",
             f"{event.file_size:,} bytes"
         )
-        
+
         self.add_field(
             story,
             styles,
             "Detected Type",
             event.detected_type
         )
-        
+
         self.add_field(
             story,
             styles,
@@ -110,61 +137,63 @@ class ReportService:
             event.mime_type
         )
 
-        self.add_heading(
-            story,
-            styles,
-            "PE Analysis"
-        )
-                        
-        self.add_field(
-            story,
-            styles,
-            "Architecture",
-            event.pe_info["architecture"]
-        )
-                
-        self.add_field(
-            story,
-            styles,
-            "Sections",
-            event.pe_info["section_count"]
-        )
-                
-        self.add_field(
-            story,
-            styles,
-            "Entry Point",
-            event.pe_info["entry_point"]
-        )        
+        if event.pe_info:
+            self.add_heading(
+                story,
+                styles,
+                "PE Analysis"
+            )
+
+            self.add_field(
+                story,
+                styles,
+                "Architecture",
+                event.pe_info["architecture"]
+            )
+
+            self.add_field(
+                story,
+                styles,
+                "Sections",
+                event.pe_info["section_count"]
+            )
+
+            self.add_field(
+                story,
+                styles,
+                "Entry Point",
+                event.pe_info["entry_point"]
+            )
 
         self.add_heading(
             story,
             styles,
             "VirusTotal"
         )
-        
+
         if event.virustotal_info:
             self.add_field(
                 story,
                 styles,
                 "Detections",
-                f"{event.virustotal_info['detections']} / {event.virustotal_info['total_engines']}"
+                f"{event.virustotal_info['detections']} / "
+                f"{event.virustotal_info['total_engines']}"
             )
-        
+
             self.add_field(
                 story,
                 styles,
                 "Reputation",
                 event.virustotal_info["reputation"]
             )
-        
+
             self.add_field(
                 story,
                 styles,
                 "Times Submitted",
                 event.virustotal_info["times_submitted"]
             )
-        
+
         else:
             self.add_field(
                 story,
@@ -178,14 +207,19 @@ class ReportService:
             styles,
             "Digital Signature"
         )
-        
+
         if event.signature_info:
             self.add_field(
                 story,
                 styles,
                 "Signed",
-                "Yes" if event.signature_info["signed"] else "No"
+                (
+                    "Yes"
+                    if event.signature_info["signed"]
+                    else "No"
+                )
             )
+
         else:
             self.add_field(
                 story,
@@ -199,7 +233,7 @@ class ReportService:
             styles,
             "MITRE ATT&CK"
         )
-        
+
         if event.mitre_info:
             for technique in event.mitre_info:
                 self.add_field(
@@ -208,6 +242,7 @@ class ReportService:
                     technique["technique"],
                     technique["name"]
                 )
+
         else:
             self.add_field(
                 story,
@@ -221,7 +256,7 @@ class ReportService:
             styles,
             "Recommendations"
         )
-        
+
         if event.verdict == "Malicious":
             self.add_field(
                 story,
@@ -229,7 +264,7 @@ class ReportService:
                 "Recommendation",
                 "Immediately isolate and investigate this file."
             )
-        
+
         elif event.verdict == "Suspicious":
             self.add_field(
                 story,
@@ -237,57 +272,75 @@ class ReportService:
                 "Recommendation",
                 "Perform additional dynamic analysis before execution."
             )
-        
+
         else:
             self.add_field(
                 story,
                 styles,
                 "Recommendation",
-                "No immediate indicators of malicious behavior were found."
+                "No immediate indicators of malicious behavior "
+                "were found."
             )
-        
-        if event.signature_info and event.signature_info["signed"]:
+
+        if (
+            event.signature_info
+            and event.signature_info["signed"]
+        ):
             self.add_field(
                 story,
                 styles,
                 "Digital Signature",
                 "File is digitally signed."
             )
-        
-        if event.pe_info["packer"]["detected"]:
+
+        if (
+            event.pe_info
+            and event.pe_info["packer"]["detected"]
+        ):
             self.add_field(
                 story,
                 styles,
                 "Packer",
-                "Possible packer detected. Consider deeper inspection."
+                "Possible packer detected. "
+                "Consider deeper inspection."
             )
-        
+
         if event.virustotal_info:
             if event.virustotal_info["detections"] > 0:
                 self.add_field(
                     story,
                     styles,
                     "VirusTotal",
-                    f"Detected by {event.virustotal_info['detections']} security vendors."
+                    f"Detected by "
+                    f"{event.virustotal_info['detections']} "
+                    f"security vendors."
                 )
 
-        story.append(Paragraph("", styles["BodyText"]))
-        
+        story.append(
+            Paragraph(
+                "",
+                styles["BodyText"]
+            )
+        )
+
         story.append(
             Paragraph(
                 "<b>Generated by:</b> Argus AI",
                 styles["BodyText"]
             )
         )
-        
+
         story.append(
             Paragraph(
-                f"<b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"<b>Generated:</b> "
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 styles["BodyText"]
             )
         )
 
         doc.build(story)
+
+        return output_path
 
 
 report_service = ReportService()

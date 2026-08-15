@@ -146,7 +146,7 @@ class AnalysisService:
         
         event.ai_explanation = ai_service.generate_explanation(event)
         
-        report_service.generate(event, "report.pdf")
+        report_service.generate(event)
         
         self.analysis_cache[event.filename] = event
         

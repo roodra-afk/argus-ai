@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import { useState } from "react";
 import { Check, Copy, ShieldCheck } from "lucide-react";
 
@@ -109,15 +110,31 @@ export default function AnalysisCard({ analysis }) {
                                 </p>
                             </div>
 
-                            <Badge
-                                className={`w-fit border px-4 py-2 text-sm font-semibold ${verdictStyles.badge}`}
-                            >
-                                <span
-                                    className={`mr-2 h-2 w-2 rounded-full ${verdictStyles.dot}`}
-                                />
-
-                                {analysis.verdict}
-                            </Badge>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        window.open(
+                                            `http://localhost:8000/api/v1/analysis/${analysis.sha256}/report`,
+                                            "_blank"
+                                        );
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download Report
+                                </button>
+                            
+                                <Badge
+                                    className={`w-fit border px-4 py-2 text-sm font-semibold ${verdictStyles.badge}`}
+                                >
+                                    <span
+                                        className={`mr-2 h-2 w-2 rounded-full ${verdictStyles.dot}`}
+                                    />
+                            
+                                    {analysis.verdict}
+                                </Badge>
+                            </div>
                         </div>
                     </div>
 

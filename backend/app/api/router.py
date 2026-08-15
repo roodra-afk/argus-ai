@@ -2,6 +2,7 @@ import json
 
 from fastapi import HTTPException
 from fastapi import APIRouter, UploadFile, File
+from fastapi.responses import FileResponse
 
 from app.core.config import settings
 
@@ -12,6 +13,7 @@ from app.schemas.chat_response import ChatResponse
 
 from app.services.analysis_service import analysis_service
 from app.services.ai_service import ai_service
+from app.services.report_service import report_service
 
 from app.db.database import SessionLocal
 from app.repositories.analysis_repository import AnalysisRepository
@@ -99,6 +101,22 @@ def analysis_history():
 
     finally:
         db.close()
+
+@router.get("/analysis/{sha256}/report")
+def download_report(sha256: str):
+    report_path = report_service.get_report_path(sha256)
+
+    if not report_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis report not found."
+        )
+
+    return FileResponse(
+        path=report_path,
+        media_type="application/pdf",
+        filename=f"argus-{sha256[:16]}.pdf",
+    )
 
 @router.get(
     "/analysis/{sha256}",

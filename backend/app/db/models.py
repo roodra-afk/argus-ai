@@ -60,6 +60,21 @@ class Analysis(Base):
         nullable=True,
     )
 
+    validation_warnings: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    string_info: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    entropy_info: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     ai_explanation: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,

@@ -186,12 +186,30 @@ class AnalysisService:
         event.risk_score = analysis.risk_score
         event.verdict = analysis.verdict
     
+        event.validation_warnings = (
+            json.loads(analysis.validation_warnings)
+            if analysis.validation_warnings
+            else []
+        )
+        
+        event.string_info = (
+            json.loads(analysis.string_info)
+            if analysis.string_info
+            else None
+        )
+        
+        event.entropy_info = (
+            json.loads(analysis.entropy_info)
+            if analysis.entropy_info
+            else None
+        )
+        
         event.pe_info = (
             json.loads(analysis.pe_info)
             if analysis.pe_info
             else None
         )
-    
+        
         event.mitre_info = (
             json.loads(analysis.mitre_info)
             if analysis.mitre_info

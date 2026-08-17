@@ -51,8 +51,8 @@ class UploadResponse(BaseModel):
     risk_score: int
     verdict: str
 
-    vt_detections: int
-    vt_total_engines: int
+    vt_detections: int | None = None
+    vt_total_engines: int | None = None
 
     signed: bool
 

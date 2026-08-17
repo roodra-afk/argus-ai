@@ -67,8 +67,16 @@ def upload_file(
         risk_score=event.risk_score,
         verdict=event.verdict,
 
-        vt_detections=event.virustotal_info["detections"],
-        vt_total_engines=event.virustotal_info["total_engines"],
+        vt_detections=(
+            event.virustotal_info["detections"]
+            if event.virustotal_info
+            else None
+        ),
+        vt_total_engines=(
+            event.virustotal_info["total_engines"]
+            if event.virustotal_info
+            else None
+        ),
 
         signed=event.signature_info["signed"],
 

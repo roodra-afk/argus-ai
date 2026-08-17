@@ -44,6 +44,21 @@ class AnalysisRepository:
                 if event.mitre_info
                 else None
             ),
+            validation_warnings=(
+                json.dumps(event.validation_warnings)
+                if event.validation_warnings
+                else None
+            ),
+            string_info=(
+                json.dumps(event.string_info)
+                if event.string_info
+                else None
+            ),
+            entropy_info=(
+                json.dumps(event.entropy_info)
+                if event.entropy_info
+                else None
+            ),
             ai_explanation=event.ai_explanation,
         )
 

@@ -83,6 +83,10 @@ def upload_file(
         pe_info=event.pe_info,
         mitre_info=event.mitre_info,
 
+        validation_warnings=event.validation_warnings,
+        string_info=event.string_info,
+        entropy_info=event.entropy_info,
+
         ai_explanation=event.ai_explanation
     )
 
@@ -203,6 +207,24 @@ def get_analysis_by_sha256(
             json.loads(analysis.mitre_info)
             if analysis.mitre_info
             else []
+        ),
+
+        validation_warnings=(
+            json.loads(analysis.validation_warnings)
+            if analysis.validation_warnings
+            else []
+        ),
+
+        string_info=(
+            json.loads(analysis.string_info)
+            if analysis.string_info
+            else None
+        ),
+
+        entropy_info=(
+            json.loads(analysis.entropy_info)
+            if analysis.entropy_info
+            else None
         ),
 
         ai_explanation=analysis.ai_explanation

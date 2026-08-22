@@ -59,4 +59,8 @@ class UploadResponse(BaseModel):
     pe_info: PEInfo | None = None
     mitre_info: list[MITRETechnique] = []
 
+    validation_warnings: list[str] | None = None
+    string_info: dict | None = None
+    entropy_info: dict | None = None
+
     ai_explanation: str | None = None

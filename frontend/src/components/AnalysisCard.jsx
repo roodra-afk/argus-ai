@@ -286,6 +286,89 @@ export default function AnalysisCard({ analysis }) {
                         </div>
                     </div>
 
+                    {/* Static Analysis Details */}
+                    {(analysis.validation_warnings?.length > 0 ||
+                        analysis.string_info ||
+                        analysis.entropy_info) && (
+                        <div className="grid gap-6 border-b border-slate-800 p-8 lg:grid-cols-3">
+                            {/* Validation Warnings */}
+                            {analysis.validation_warnings?.length > 0 && (
+                                <div className="rounded-xl border border-yellow-500/20 bg-yellow-950/10 p-6">
+                                    <p className="text-xs font-medium uppercase tracking-widest text-yellow-400">
+                                        Validation Warnings
+                                    </p>
+
+                                    <div className="mt-4 space-y-2">
+                                        {analysis.validation_warnings.map(
+                                            (warning, index) => (
+                                                <p
+                                                    key={index}
+                                                    className="text-sm leading-6 text-slate-300"
+                                                >
+                                                    {warning}
+                                                </p>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* String Intelligence */}
+                            {analysis.string_info && (
+                                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-6">
+                                    <p className="text-xs font-medium uppercase tracking-widest text-blue-400">
+                                        String Intelligence
+                                    </p>
+
+                                    <p className="mt-4 text-3xl font-bold text-white">
+                                        {analysis.string_info.urls?.length ?? 0}
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        URLs discovered
+                                    </p>
+
+                                    {analysis.string_info.urls?.length > 0 && (
+                                        <div className="mt-4 max-h-40 space-y-2 overflow-y-auto">
+                                            {analysis.string_info.urls.map(
+                                                (url, index) => (
+                                                    <p
+                                                        key={index}
+                                                        className="break-all font-mono text-xs text-slate-400"
+                                                    >
+                                                        {url}
+                                                    </p>
+                                                )
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Entropy */}
+                            {analysis.entropy_info && (
+                                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-6">
+                                    <p className="text-xs font-medium uppercase tracking-widest text-purple-400">
+                                        File Entropy
+                                    </p>
+
+                                    <p className="mt-4 text-3xl font-bold text-white">
+                                        {analysis.entropy_info.entropy}
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Average entropy
+                                    </p>
+
+                                    <p className="mt-4 text-xs leading-5 text-slate-500">
+                                        Higher entropy can indicate compressed,
+                                        encrypted, or packed data.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* AI Assessment */}
                     {analysis.ai_explanation && (
                         <div className="p-8">
